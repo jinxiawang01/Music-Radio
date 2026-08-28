@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Melodio TTS Voice Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0c10;
+      --panel: #14161d;
+      --panel2: #1b1e27;
+      --line: #303440;
+      --ink: #f5f5f7;
+      --muted: #a5a9b5;
+      --accent: #e8e8ee;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    main {
+      width: min(1180px, calc(100vw - 32px));
+      margin: 32px auto;
+      display: grid;
+      gap: 18px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+    }
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+    p { color: var(--muted); }
+    textarea, select, input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 12px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    textarea { min-height: 130px; resize: vertical; }
+    button {
+      border: 0;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #111;
+      padding: 10px 16px;
+      font-weight: 800;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    button.secondary {
+      background: var(--panel2);
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
+    .grid {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 18px;
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .voices {
+      display: grid;
+      gap: 10px;
+    }
+    .voice {
+      border: 1px solid var(--line);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+    .voice-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+    .voice h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+    .voice small, .meta, .status {
+      color: var(--muted);
+      font-size: 12px;
+      word-break: break-all;
+    }
+    audio { width: 100%; }
+    .score {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .score label {
+      color: var(--muted);
+      font-size: 12px;
+      display: grid;
+      gap: 4px;
+    }
+    .notes {
+      min-height: 44px;
+      font-size: 13px;
+    }
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 860px) {
+      main { margin: 20px auto; }
+      header, .grid { display: grid; grid-template-columns: 1fr; }
+      .score { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Melodio TTS Voice Lab</h1>
+        <p>同一段 DJ 文案，对比豆包和 MiniMax 候选音色。不会影响主 demo。</p>
+      </div>
+      <div class="row">
+        <button id="playAll" type="button">批量生成</button>
+        <button id="clearAll" class="secondary" type="button">清空评分</button>
+      </div>
+    </header>
+    <section class="grid">
+      <aside class="panel">
+        <label>
+          测试文案
+          <textarea id="text">这里是 Melodio。现在是夜里的慢速时段，适合把话说少一点，把歌放长一点。下一首，我们往更安静的地方去。</textarea>
+        </label>
+        <label>
+          快速切换样本
+          <select id="sampleSelect"></select>
+        </label>
+        <p class="status" id="globalStatus">准备就绪。</p>
+      </aside>
+      <section class="voices" id="voices"></section>
+    </section>
+  </main>
+  <script>
+    const SAMPLES = [
+      {
+        name: "深夜电台",
+        text: "这里是 Melodio。现在是夜里的慢速时段，适合把话说少一点，把歌放长一点。下一首，我们往更安静的地方去。",
+      },
+      {
+        name: "克制伤感",
+        text: "这组歌不负责把人哄开心。它只是把那些没说出口的话，放到一个不会被打扰的地方。第一首先轻一点，让情绪自己进来。",
+      },
+      {
+        name: "暗黑流行",
+        text: "接下来会冷一点。低声线、电子感，还有一点靠近耳边的压迫感。不是为了吓人，是让漂亮的黑色慢慢铺开。",
+      },
+      {
+        name: "雨夜",
+        text: "如果外面还在下雨，就先别急着出门。我们把鼓点收小一点，让人声靠近一点，像房间里只剩下一盏灯。",
+      },
+      {
+        name: "中英混合",
+        text: "如果你想要 Billie Eilish 那种暗黑流行感，我会保留低声线、冷色调和一点电子质感。不是复制她，而是靠近那种贴着耳边说话的距离。",
+      },
+    ];
+
+    const VOICES = [
+      { provider: "doubao", name: "豆包 vivi 2.0", id: "zh_female_vv_uranus_bigtts", note: "通用女声 baseline" },
+      { provider: "doubao", name: "豆包 小何", id: "zh_female_xiaohe_uranus_bigtts", note: "温柔陪伴女声" },
+      { provider: "doubao", name: "豆包 知性灿灿", id: "saturn_zh_female_cancan_tob", note: "偏成熟女主持感" },
+      { provider: "doubao", name: "豆包 云舟", id: "zh_male_m191_uranus_bigtts", note: "成熟男声 baseline" },
+      { provider: "doubao", name: "豆包 小天", id: "zh_male_taocheng_uranus_bigtts", note: "年轻自然男声" },
+      { provider: "minimax", name: "MiniMax Warm Bestie", id: "Chinese (Mandarin)_Warm_Bestie", note: "当前主链路 baseline" },
+      { provider: "minimax", name: "MiniMax Mature Woman", id: "Chinese (Mandarin)_Mature_Woman", note: "成熟女声候选" },
+      { provider: "minimax", name: "MiniMax Wise Women", id: "Chinese (Mandarin)_Wise_Women", note: "知性成熟女声" },
+      { provider: "minimax", name: "MiniMax Radio Host", id: "Chinese (Mandarin)_Radio_Host", note: "电台主持感" },
+      { provider: "minimax", name: "MiniMax Lyrical Voice", id: "Chinese (Mandarin)_Lyrical_Voice", note: "更抒情" },
+      { provider: "minimax", name: "MiniMax Sincere Adult", id: "Chinese (Mandarin)_Sincere_Adult", note: "成熟自然" },
+    ];
+
+    const textEl = document.querySelector("#text");
+    const sampleSelect = document.querySelector("#sampleSelect");
+    const voicesEl = document.querySelector("#voices");
+    const globalStatus = document.querySelector("#globalStatus");
+
+    function storageKey(voice) {
+      return `melodio_voice_score:${voice.provider}:${voice.id}`;
+    }
+
+    function esc(value) {
+      return String(value ?? "").replace(/[&<>"]/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+      })[char]);
+    }
+
+    function rowHtml(voice, index) {
+      const saved = JSON.parse(localStorage.getItem(storageKey(voice)) || "{}");
+      const fields = ["自然", "DJ感", "情绪", "亲近", "耐听"];
+      return `
+        <article class="voice" data-index="${index}">
+          <div class="voice-head">
+            <div>
+              <h2>${esc(voice.name)} <span class="badge">${esc(voice.provider)}</span></h2>
+              <div class="meta">${esc(voice.id)}</div>
+              <small>${esc(voice.note)}</small>
+            </div>
+            <button type="button" class="play-one">生成</button>
+          </div>
+          <audio controls preload="none"></audio>
+          <div class="status">未生成</div>
+          <div class="score">
+            ${fields.map((field) => `
+              <label>${field}<input type="number" min="1" max="5" step="1" data-score="${field}" value="${esc(saved[field] || "")}" /></label>
+            `).join("")}
+          </div>
+          <input class="notes" placeholder="备注：太亮 / 太客服 / 暗色好 / 长句不稳..." value="${esc(saved.notes || "")}" />
+        </article>
+      `;
+    }
+
+    async function generateVoice(voice, card) {
+      const button = card.querySelector(".play-one");
+      const status = card.querySelector(".status");
+      const audio = card.querySelector("audio");
+      const startedAt = performance.now();
+      button.disabled = true;
+      status.textContent = "生成中...";
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      try {
+        const response = await fetch("/tts/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            provider: voice.provider,
+            text: `${textEl.value.trim()} ${Date.now()}`,
+            voice_id: voice.provider === "minimax" ? voice.id : "",
+            speaker: voice.provider === "doubao" ? voice.id : "",
+          }),
+        });
+        const data = await response.json();
+        if (!data.ok || !data.audio_url) throw new Error(data.error || "生成失败");
+        audio.src = data.audio_url;
+        audio.onplaying = () => {
+          status.textContent = `播放中，首声约 ${((performance.now() - startedAt) / 1000).toFixed(2)} 秒`;
+        };
+        audio.onended = () => {
+          status.textContent = "播放完成";
+          button.disabled = false;
+        };
+        audio.onerror = () => {
+          status.textContent = "播放失败";
+          button.disabled = false;
+        };
+        await audio.play();
+        status.textContent = `已开始，首声约 ${((performance.now() - startedAt) / 1000).toFixed(2)} 秒`;
+      } catch (error) {
+        status.textContent = `失败：${error.message}`;
+        button.disabled = false;
+      }
+    }
+
+    function saveCard(card, voice) {
+      const data = {};
+      card.querySelectorAll("[data-score]").forEach((input) => {
+        data[input.dataset.score] = input.value;
+      });
+      data.notes = card.querySelector(".notes").value;
+      localStorage.setItem(storageKey(voice), JSON.stringify(data));
+    }
+
+    sampleSelect.innerHTML = SAMPLES.map((sample, index) => `<option value="${index}">${esc(sample.name)}</option>`).join("");
+    sampleSelect.addEventListener("change", () => {
+      textEl.value = SAMPLES[Number(sampleSelect.value)]?.text || "";
+    });
+
+    voicesEl.innerHTML = VOICES.map(rowHtml).join("");
+    voicesEl.querySelectorAll(".voice").forEach((card) => {
+      const voice = VOICES[Number(card.dataset.index)];
+      card.querySelector(".play-one").addEventListener("click", () => generateVoice(voice, card));
+      card.querySelectorAll("input").forEach((input) => input.addEventListener("change", () => saveCard(card, voice)));
+    });
+
+    document.querySelector("#playAll").addEventListener("click", async () => {
+      const cards = Array.from(voicesEl.querySelectorAll(".voice"));
+      globalStatus.textContent = "批量生成中...";
+      for (const card of cards) {
+        const voice = VOICES[Number(card.dataset.index)];
+        await generateVoice(voice, card);
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+      globalStatus.textContent = "批量生成完成。";
+    });
+
+    document.querySelector("#clearAll").addEventListener("click", () => {
+      VOICES.forEach((voice) => localStorage.removeItem(storageKey(voice)));
+      location.reload();
+    });
+  </script>
+</body>
+</html>

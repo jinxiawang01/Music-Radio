@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>豆包流式 TTS 测试</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0c0c0f;
+      color: #f5f5f7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      display: grid;
+      place-items: center;
+    }
+    main {
+      width: min(720px, calc(100vw - 32px));
+      display: grid;
+      gap: 16px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 140px;
+      box-sizing: border-box;
+      border: 1px solid #33343a;
+      border-radius: 14px;
+      background: #17181d;
+      color: #fff;
+      padding: 16px;
+      font-size: 16px;
+      line-height: 1.55;
+      resize: vertical;
+    }
+    button {
+      border: 0;
+      border-radius: 999px;
+      background: #f5f5f7;
+      color: #111;
+      padding: 12px 20px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    audio {
+      width: 100%;
+    }
+    .status {
+      min-height: 22px;
+      color: #b8bac4;
+      font-size: 14px;
+    }
+    .panel {
+      border: 1px solid #272932;
+      border-radius: 18px;
+      padding: 18px;
+      background: #121319;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div>
+      <h1>豆包流式 TTS 测试</h1>
+      <p class="status" id="status">正在检查配置...</p>
+    </div>
+    <div class="panel">
+      <textarea id="text">接下来这首歌适合夜里开车听。不要急着抵达，让声音先把车窗外的灯慢慢推远。</textarea>
+      <p>
+        <button id="playBtn" type="button">生成并播放</button>
+      </p>
+      <audio id="audio" controls preload="none"></audio>
+    </div>
+  </main>
+  <script>
+    const statusEl = document.querySelector("#status");
+    const textEl = document.querySelector("#text");
+    const playBtn = document.querySelector("#playBtn");
+    const audio = document.querySelector("#audio");
+
+    async function checkStatus() {
+      try {
+        const response = await fetch("/doubao-tts/status", { cache: "no-store" });
+        const data = await response.json();
+        statusEl.textContent = data.configured
+          ? `已配置：${data.model} / ${data.speaker}`
+          : "未配置豆包 TTS key，请先在 .env 里填写 DOUBAO_TTS_*。";
+      } catch (error) {
+        statusEl.textContent = `状态检查失败：${error.message}`;
+      }
+    }
+
+    playBtn.addEventListener("click", async () => {
+      const text = textEl.value.trim();
+      if (!text) return;
+      playBtn.disabled = true;
+      statusEl.textContent = "正在请求豆包流式 TTS...";
+      audio.pause();
+      audio.removeAttribute("src");
+      audio.load();
+      const startedAt = performance.now();
+      audio.src = `/doubao-tts/stream?text=${encodeURIComponent(text)}`;
+      audio.onplaying = () => {
+        statusEl.textContent = `已开始播放，首声约 ${((performance.now() - startedAt) / 1000).toFixed(2)} 秒。`;
+        playBtn.disabled = false;
+      };
+      audio.onerror = () => {
+        statusEl.textContent = "播放失败。请检查服务日志和豆包 TTS key / voice / endpoint 配置。";
+        playBtn.disabled = false;
+      };
+      audio.onended = () => {
+        statusEl.textContent = "播放完成。";
+        playBtn.disabled = false;
+      };
+      try {
+        await audio.play();
+      } catch (error) {
+        statusEl.textContent = `浏览器阻止自动播放，请手动点播放器播放：${error.message}`;
+        playBtn.disabled = false;
+      }
+    });
+
+    checkStatus();
+  </script>
+</body>
+</html>

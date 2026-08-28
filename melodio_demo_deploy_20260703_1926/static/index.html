@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Melodio Radio · 私人音乐电台</title>
+  <link rel="stylesheet" href="/static/styles.css?v=radio-input-20260703-2" />
+</head>
+<body>
+  <main class="shell radio-shell">
+    <section class="radio-stage" aria-label="Melodio radio">
+      <div class="phone-status" aria-hidden="true">
+        <span>19:40</span>
+        <span class="phone-icons">▮▮▮  Wi-Fi  ▰</span>
+      </div>
+      <div class="topbar">
+        <div class="brand-lockup">
+          <span class="station-dot"></span>
+          <span>Melodio FM</span>
+        </div>
+        <div class="model-row">
+          <span>Model</span>
+          <select id="provider"></select>
+          <button id="neteaseLoginBtn" class="netease-login-btn" type="button">登录网易云</button>
+        </div>
+      </div>
+
+      <section class="radio-hero">
+        <div class="cover-art" aria-hidden="true">
+          <img class="cover-image" alt="" />
+          <div class="cover-disc"></div>
+          <div class="cover-grid"></div>
+        </div>
+        <div class="now-panel">
+          <p class="eyebrow">Private Radio Station</p>
+          <p class="radio-line" id="radioLine">准备开始</p>
+          <h1>Melodio</h1>
+          <div class="now-playing-card">
+            <span class="radio-info-label">Now Playing</span>
+            <strong id="heroNowPlaying">说出你想听的音乐</strong>
+            <span id="providerStatus"></span>
+          </div>
+          <div class="transport-row">
+            <button class="hero-control" type="button" data-control="previous" aria-label="上一首">Ⅰ◀</button>
+            <button class="hero-control transport-main" type="button" data-control="play" aria-label="播放或暂停">▶</button>
+            <button class="hero-control" type="button" data-control="next" aria-label="下一首">▶Ⅰ</button>
+            <button class="hero-control" type="button" data-control="favorite" aria-label="喜欢">♡</button>
+          </div>
+        </div>
+      </section>
+
+      <form id="form" class="composer">
+        <label for="query">Request line</label>
+        <div class="input-row">
+          <textarea id="query" rows="1" wrap="off" placeholder="告诉 Melodio 你现在想听什么">适合深夜一个人开车的伤感华语歌</textarea>
+          <button id="voiceBtn" class="voice-btn" type="button" aria-label="语音输入" title="语音输入">语音</button>
+          <button id="submitBtn" type="submit">发送</button>
+        </div>
+        <p class="dispatch-status" id="dispatchStatus">Ready</p>
+      </form>
+
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="conversation" id="conversation"></section>
+    <section class="analysis" id="analysis" hidden></section>
+    <section class="results" id="results" hidden></section>
+  </main>
+
+  <script src="/static/app.js?v=radio-clean-20260703-1"></script>
+</body>
+</html>
